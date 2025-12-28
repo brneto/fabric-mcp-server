@@ -52,7 +52,27 @@ To use this server with a gateway like **Claude Desktop**, add the following to 
 }
 ```
 
-### 3. Usage with MCP Gateway "Run" Command
+### 3. Access via Gemini CLI
+
+To use this server with the **Gemini CLI**, add the following to your `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "fabric": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "fabric-mcp-server"
+      ]
+    }
+  }
+}
+```
+
+### 4. Usage with MCP Gateway "Run" Command
 
 If you are using a gateway that supports running servers via a direct command string, use:
 
