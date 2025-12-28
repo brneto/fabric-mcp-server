@@ -17,7 +17,7 @@ COPY pyproject.toml .
 RUN uv pip install --system -r pyproject.toml
 
 # Copy server code
-COPY server.py .
+COPY server.py helpers.py ./
 
 # Create data directory
 RUN mkdir -p /app/data
