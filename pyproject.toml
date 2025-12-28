@@ -1,0 +1,9 @@
+[project]
+name = "fabric-mcp-server"
+version = "0.1.0"
+description = "Fabric MCP Server"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp==1.25.0"
+]
