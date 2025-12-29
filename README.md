@@ -12,6 +12,37 @@ A Model Context Protocol (MCP) server that exposes [Daniel Miessler's Fabric](ht
 - **Execute Pattern Tool**: Exposes an `execute_pattern` tool so AI agents can execute any Fabric pattern programmatically with optional strategy.
 - **List Patterns Tool**: Exposes a `list_patterns` tool so AI agents can discover available Fabric patterns programmatically.
 - **List Strategies Tool**: Exposes a `list_strategies` tool to discover available strategies and their descriptions.
+- **Research Resources**: Exposes markdown research documents as MCP resources, accessible via custom URIs (e.g., `markdown://researches/the-prompt-report`).
+- **Resource Subscriptions**: Supports subscribing to resource changes, notifying clients when markdown files are modified.
+
+## Project Structure
+
+```
+fabric-mcp-server/
+├── server.py              # Main entry point, MCP server registration
+├── Dockerfile
+├── pyproject.toml
+│
+├── helpers/               # Helper utilities package
+│   ├── __init__.py        # Re-exports all functions
+│   ├── _types.py          # TypedDict definitions
+│   ├── config.py          # Configuration constants
+│   ├── repo.py            # Repository management (sync, clone)
+│   ├── paths.py           # Directory/path utilities
+│   ├── text.py            # Text processing utilities
+│   ├── patterns.py        # Pattern operations
+│   └── strategies.py      # Strategy operations
+│
+├── mcp_handlers/          # MCP protocol handlers package
+│   ├── __init__.py        # Re-exports all handlers
+│   ├── tools.py           # Tool handlers (list_patterns, execute_pattern, etc.)
+│   ├── resources.py       # Resource handlers (research documents)
+│   └── prompts.py         # Prompt handlers (Fabric patterns as prompts)
+│
+└── resources/
+    └── markdown/
+        └── researches/    # Markdown research documents exposed as MCP resources
+```
 
 ## Prerequisites
 
@@ -148,25 +179,31 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
 
 1. **Startup**: The server clones `https://github.com/danielmiessler/fabric` into the container.
 2. **Prompts**: It scans folders like `extract_wisdom`, `summarize`, etc. in `patterns/`.
-3. **Execution**:
+3. **Resources**: It scans the `resources/markdown/researches/` folder for markdown files and exposes them as MCP resources with custom URIs.
+4. **Subscriptions**: Clients can subscribe to resource changes. The server monitors the resources folder and sends notifications when files are modified.
+5. **Execution**:
    - When you select a prompt (e.g., `extract_wisdom`), it reads the `system.md` file.
    - If you provide a `strategy` (e.g., `cot`), it fetches the strategy JSON, extracts the prompt content, and **prepends** it to the system message.
    - The `input` argument content is **appended** to the end of the prompt.
-4. **Tools**: 
+6. **Tools**: 
    - Use `execute_pattern` to run any Fabric pattern with content and optional strategy.
    - Use `list_patterns` to discover all available Fabric patterns.
    - Use `list_strategies` to discover available strategies and their descriptions.
 
-## MCP Prompts vs Tools
+## MCP Prompts, Tools, and Resources
 
-> **Important Note**: In the strict Model Context Protocol (MCP) definition, **Prompts** are templates exposed by servers for the client (you) to use, while **Tools** are functions the AI agent can call directly.
+> **Important Note**: In the Model Context Protocol (MCP):
+> - **Prompts** are templates exposed by servers for the client (you) to use
+> - **Tools** are functions the AI agent can call directly
+> - **Resources** are data sources (files, documents) that can be read by clients
 >
 > As an AI agent, LLMs primarily see Tools. They may not have direct visibility into user-facing Prompts (like `analyze_bill_short` or `youtube_summary`) from connected MCP servers. Those are typically accessed via your client's UI (e.g., typing `/` in your chat interface with Claude Desktop).
 >
-> This is why we expose both:
+> This is why we expose:
 > - **Prompts**: For clients that support the `/` command interface
 > - **`execute_pattern` Tool**: So AI agents can run any pattern programmatically via natural language
 > - **`list_patterns` Tool**: So AI agents can discover available patterns
+> - **Resources**: Research documents accessible via `markdown://researches/{title}` URIs
 
 ## Usage Examples
 
@@ -191,6 +228,25 @@ AI agents can use the available tools to discover and execute patterns:
 | "Create a micro summary of https://youtu.be/abc123" | `execute_pattern` | `pattern="create_micro_summary"`, `input="https://youtu.be/abc123"` |
 | "Summarize this article with strategy cot: https://example.com/article" | `execute_pattern` | `pattern="summarize"`, `input="https://example.com/article"`, `strategy="cot"` |
 | "Extract wisdom using chain-of-thought from this text: [text]" | `execute_pattern` | `pattern="extract_wisdom"`, `input="[text]"`, `strategy="cot"` |
+
+### Using Resources
+
+MCP Resources are data sources exposed by the server. Research documents are available via custom URIs:
+
+| Resource URI | Description |
+|-------------|-------------|
+| `markdown://researches/the-prompt-report` | The Prompt Report research document |
+
+To add new research documents, place markdown files in the `resources/markdown/researches/` folder. They will be automatically discovered and exposed with a URL-friendly slug based on the filename.
+
+#### Resource Subscriptions
+
+Clients can subscribe to resource changes to receive notifications when files are modified:
+
+- **Subscribe**: Call `resources/subscribe` with the resource URI to start receiving change notifications
+- **Unsubscribe**: Call `resources/unsubscribe` to stop receiving notifications
+
+When a subscribed markdown file is modified, the server sends a `notifications/resources/updated` notification to the client.
 
 ### Prompt Arguments
 

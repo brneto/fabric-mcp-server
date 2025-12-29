@@ -7,18 +7,23 @@ as MCP prompts and tools.
 
 import asyncio
 import logging
-from typing import List
+import subprocess
+from typing import List, Optional, cast, Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 import mcp.types as types
 
-from helpers import (
-    sync_repo,
-    get_strategy_content,
-    get_pattern_content,
-    list_all_patterns,
-    list_all_strategies,
+from helpers import sync_repo
+from mcp_handlers.tools import get_tools, call_tool
+from mcp_handlers.prompts import list_prompts, get_prompt
+from mcp_handlers.resources import (
+    list_resources,
+    list_resource_templates,
+    read_resource,
+    subscribe,
+    unsubscribe,
+    set_notification_callback,
 )
 
 # Configure logging
@@ -36,100 +41,47 @@ server = Server("fabric-mcp-server", version="0.1.0")
 @server.list_tools()
 async def handle_list_tools() -> List[types.Tool]:
     """List available tools."""
-    return [
-        types.Tool(
-            name="list_strategies",
-            description="List all available strategies (used as argument of Fabric patterns prompts) with their descriptions",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
-        ),
-        types.Tool(
-            name="list_patterns",
-            description="List all available Fabric patterns (prompts) that can be used for content analysis",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
-        ),
-        types.Tool(
-            name="execute_pattern",
-            description="Execute a Fabric pattern to analyze content. Use list_patterns to discover available patterns and list_strategies for available strategies.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "pattern": {
-                        "type": "string",
-                        "description": "Pattern name to execute (e.g., 'create_micro_summary', 'extract_wisdom', 'summarize')"
-                    },
-                    "input": {
-                        "type": "string",
-                        "description": "Content to analyze: text, URL (YouTube, article, etc.), or any input for the pattern"
-                    },
-                    "strategy": {
-                        "type": "string",
-                        "description": "Optional thinking strategy to enhance analysis (e.g., 'cot' for chain-of-thought, 'tot' for tree-of-thought)"
-                    }
-                },
-                "required": ["pattern", "input"]
-            }
-        )
-    ]
+    return get_tools()
 
 
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent]:
     """Handle tool invocations."""
-    if name == "list_strategies":
-        strategies = list_all_strategies()
-        if not strategies:
-            return [types.TextContent(type="text", text="No strategies found")]
-        result = [
-            f"- **{s['name']}**: {s['description']}"
-            for s in strategies
-        ]
-        return [types.TextContent(type="text", text="\n".join(result))]
+    return call_tool(name, arguments)
 
-    if name == "list_patterns":
-        patterns = list_all_patterns()
-        if not patterns:
-            return [types.TextContent(type="text", text="No patterns found")]
-        result = [
-            f"- **{p['name']}**: {p['description']}"
-            for p in patterns
-        ]
-        return [types.TextContent(type="text", text="\n".join(result))]
 
-    if name == "execute_pattern":
-        pattern_name = arguments.get("pattern")
-        user_input = arguments.get("input")
-        strategy_name = arguments.get("strategy")
+# =============================================================================
+# MCP Resources
+# =============================================================================
 
-        if not pattern_name:
-            raise ValueError("Pattern name is required")
-        if not user_input:
-            raise ValueError("Input is required")
+@server.list_resources()
+async def handle_list_resources() -> List[types.Resource]:
+    """List all available research documents."""
+    return list_resources()
 
-        content = get_pattern_content(pattern_name)
-        if content is None:
-            raise ValueError(f"Pattern '{pattern_name}' not found. Use list_patterns to see available patterns.")
 
-        # Prepend strategy if provided
-        if strategy_name:
-            strategy = get_strategy_content(strategy_name)
-            if not strategy:
-                raise ValueError(f"Strategy '{strategy_name}' not found. Use list_strategies to see available strategies.")
-            content = f"{strategy.get('prompt')}\n\n{content}"
+@server.list_resource_templates()
+async def handle_list_resource_templates() -> List[types.ResourceTemplate]:
+    """Expose the custom URI pattern to clients."""
+    return list_resource_templates()
 
-        # Append user input
-        content += f"{user_input}"
 
-        return [types.TextContent(type="text", text=content)]
+@server.read_resource()
+async def handle_read_resource(uri: str) -> str:
+    """Handle requests for the custom URI."""
+    return read_resource(uri)
 
-    raise ValueError(f"Unknown tool: {name}")
+
+@server.subscribe_resource()
+async def handle_subscribe_resource(uri: str) -> None:
+    """Subscribe to resource changes."""
+    subscribe(uri)
+
+
+@server.unsubscribe_resource()
+async def handle_unsubscribe_resource(uri: str) -> None:
+    """Unsubscribe from resource changes."""
+    unsubscribe(uri)
 
 
 # =============================================================================
@@ -139,75 +91,51 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
 @server.list_prompts()
 async def handle_list_prompts() -> List[types.Prompt]:
     """List all available Fabric patterns as prompts."""
-    patterns = list_all_patterns()
-    strategies = list_all_strategies()
-
-    # Build a list of available strategy names for the description
-    strategy_names = [s["name"] for s in strategies]
-    strategy_list = ", ".join(strategy_names[:5])  # Show first 5
-    if len(strategy_names) > 5:
-        strategy_list += f", ... ({len(strategy_names)} total)"
-
-    strategy_description = (
-        f"Thinking strategy to enhance the analysis. "
-        f"Available strategies: {strategy_list}. "
-        f"Common strategies: 'cot' (chain-of-thought), 'tot' (tree-of-thought). "
-        f"When user says 'use strategy X', 'with strategy X', or 'using X strategy', set this to X."
-    )
-
-    return [
-        types.Prompt(
-            name=pattern["name"],
-            description=pattern["description"],
-            arguments=[
-                types.PromptArgument(
-                    name="strategy",
-                    description=strategy_description,
-                    required=False
-                ),
-                types.PromptArgument(
-                    name="input",
-                    description="The content to process: text, URL (YouTube, article, etc.), or any input the pattern should analyze.",
-                    required=True
-                )
-            ]
-        )
-        for pattern in patterns
-    ]
+    return list_prompts()
 
 
 @server.get_prompt()
-async def handle_get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
+async def handle_get_prompt(name: str, arguments: Optional[dict[str, str]]) -> types.GetPromptResult:
     """Get a specific prompt by name with optional strategy and input."""
-    content = get_pattern_content(name)
+    return get_prompt(name, arguments)
 
-    if content is None:
-        raise ValueError(f"Pattern '{name}' not found")
 
-    # Prepend strategy if provided
-    if arguments and arguments.get("strategy"):
-        strategy_name = arguments["strategy"]
-        strategy = get_strategy_content(strategy_name)
-        if not strategy:
-            raise ValueError(f"Strategy '{strategy_name}' not found")
-        content = f"{strategy.get('prompt')}\n\n{content}"
+# =============================================================================
+# Resource Change Notification
+# =============================================================================
 
-    # Append user input if provided
-    if arguments and arguments.get("input"):
-        user_input = arguments["input"]
-        content += f"\n{user_input}"
+def create_resource_notification_callback(mcp_server: Server):
+    """
+    Create a callback function for resource change notifications.
 
-    return types.GetPromptResult(
-        messages=[
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(
-                    type="text",
-                    text=content
+    Args:
+        mcp_server: The MCP Server instance to use for sending notifications.
+
+    Returns:
+        An async callback function that sends resource updated notifications.
+    """
+    async def notify_resource_changed(uri: str) -> None:
+        """Send a resource changed notification to the client."""
+        logger.info(f"Sending resource changed notification for: {uri}")
+        try:
+            from pydantic import AnyUrl
+            notification = types.ResourceUpdatedNotification(
+                params=types.ResourceUpdatedNotificationParams(
+                    uri=AnyUrl(uri)
                 )
             )
-        ]
-    )
+            if mcp_server.request_context and mcp_server.request_context.session:
+                # Cast to ServerNotification as ResourceUpdatedNotification is a valid server notification
+                # Use Any as intermediate type to avoid type checker warnings
+                await mcp_server.request_context.session.send_notification(
+                    cast(types.ServerNotification, cast(Any, notification))
+                )
+        except asyncio.CancelledError:
+            raise  # Re-raise to properly propagate cancellation
+        except (ValueError, OSError) as e:
+            logger.error(f"Failed to send resource update notification: {e}")
+
+    return notify_resource_changed
 
 
 # =============================================================================
@@ -219,11 +147,14 @@ async def main():
     # Sync repo on startup
     try:
         sync_repo()
-    except Exception as e:
+    except (subprocess.CalledProcessError, OSError) as e:
         logger.error(f"Failed to sync repo: {e}")
         # Continue anyway - prompts will be empty if repo fails
 
     async with stdio_server() as (read_stream, write_stream):
+        # Set up the notification callback for resource changes
+        set_notification_callback(create_resource_notification_callback(server))
+
         await server.run(
             read_stream,
             write_stream,
