@@ -9,6 +9,7 @@ A Model Context Protocol (MCP) server that exposes [Daniel Miessler's Fabric](ht
 - **Smart Descriptions**: Extracts meaningful descriptions from each pattern's `system.md` file to help LLMs understand when to use each pattern.
 - **Strategy Support**: Every prompt includes an optional `strategy` argument to prepend context from `strategies/`. Natural language phrases like "with strategy cot" or "using cot strategy" are recognized.
 - **User Input**: Every prompt requires an `input` argument for user-provided content (text, URL, etc.).
+- **Execute Pattern Tool**: Exposes an `execute_pattern` tool so AI agents can execute any Fabric pattern programmatically with optional strategy.
 - **List Patterns Tool**: Exposes a `list_patterns` tool so AI agents can discover available Fabric patterns programmatically.
 - **List Strategies Tool**: Exposes a `list_strategies` tool to discover available strategies and their descriptions.
 
@@ -113,6 +114,7 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
         type: server
         image: fabric-mcp-server:latest
         tools:
+          - execute_pattern
           - list_patterns
           - list_strategies
         prompts: []  # One prompt per pattern in the Fabric repository
@@ -151,6 +153,7 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
    - If you provide a `strategy` (e.g., `cot`), it fetches the strategy JSON, extracts the prompt content, and **prepends** it to the system message.
    - The `input` argument content is **appended** to the end of the prompt.
 4. **Tools**: 
+   - Use `execute_pattern` to run any Fabric pattern with content and optional strategy.
    - Use `list_patterns` to discover all available Fabric patterns.
    - Use `list_strategies` to discover available strategies and their descriptions.
 
@@ -162,7 +165,8 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
 >
 > This is why we expose both:
 > - **Prompts**: For clients that support the `/` command interface
-> - **`list_patterns` Tool**: So AI agents can programmatically discover and reference available patterns
+> - **`execute_pattern` Tool**: So AI agents can run any pattern programmatically via natural language
+> - **`list_patterns` Tool**: So AI agents can discover available patterns
 
 ## Usage Examples
 
@@ -178,13 +182,15 @@ MCP Prompts are accessed through your client's UI. For example, in Claude Deskto
 
 ### Using Tools via Natural Language
 
-AI agents can use the available tools to discover patterns and strategies:
+AI agents can use the available tools to discover and execute patterns:
 
-| Natural Language Prompt | Tool Called |
-|------------------------|-------------|
-| "What Fabric patterns are available?" | `list_patterns` |
-| "Show me the available strategies" | `list_strategies` |
-| "List all patterns for summarization" | `list_patterns` (then filters results) |
+| Natural Language Prompt | Tool Called | Arguments |
+|------------------------|-------------|-----------|
+| "What Fabric patterns are available?" | `list_patterns` | - |
+| "Show me the available strategies" | `list_strategies` | - |
+| "Create a micro summary of https://youtu.be/abc123" | `execute_pattern` | `pattern="create_micro_summary"`, `input="https://youtu.be/abc123"` |
+| "Summarize this article with strategy cot: https://example.com/article" | `execute_pattern` | `pattern="summarize"`, `input="https://example.com/article"`, `strategy="cot"` |
+| "Extract wisdom using chain-of-thought from this text: [text]" | `execute_pattern` | `pattern="extract_wisdom"`, `input="[text]"`, `strategy="cot"` |
 
 ### Prompt Arguments
 
