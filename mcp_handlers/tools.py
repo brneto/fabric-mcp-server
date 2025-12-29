@@ -19,6 +19,7 @@ from helpers import (
     list_all_patterns,
     list_all_strategies,
     get_available_researches,
+    slugify,
 )
 from mcp_handlers.resources import read_resource
 
@@ -181,7 +182,9 @@ def _handle_read_research_resource(arguments: dict) -> List[types.TextContent]:
     if resource_format not in ("markdown", "pdf"):
         raise ValueError("Format must be 'markdown' or 'pdf'")
 
-    uri = f"{resource_format}://researches/{resource_name}"
+    # Normalize the resource name to a slug (handles both "The Prompt Report" and "the-prompt-report")
+    resource_slug = slugify(resource_name)
+    uri = f"{resource_format}://researches/{resource_slug}"
 
     try:
         content = read_resource(uri)

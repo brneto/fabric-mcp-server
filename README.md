@@ -193,6 +193,8 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
    - Use `execute_pattern` to run any Fabric pattern with content and optional strategy.
    - Use `list_patterns` to discover all available Fabric patterns.
    - Use `list_strategies` to discover available strategies and their descriptions.
+   - Use `list_research_resources` to discover all available research documents.
+   - Use `read_research_resource` to read a specific research document by name (supports both human-readable names like "The Prompt Report" and slugs like "the-prompt-report").
 
 ## MCP Prompts, Tools, and Resources
 
@@ -233,7 +235,7 @@ AI agents can use the available tools to discover and execute patterns:
 | "Show me the available strategies" | `list_strategies` | - |
 | "What research documents are available?" | `list_research_resources` | - |
 | "List all research papers" | `list_research_resources` | - |
-| "Read the Prompt Report research paper" | `read_research_resource` | `name="the-prompt-report"` |
+| "Read the Prompt Report research paper" | `read_research_resource` | `name="The Prompt Report"` or `name="the-prompt-report"` |
 | "Show me the content of the prompt report" | `read_research_resource` | `name="the-prompt-report"`, `format="markdown"` |
 | "Summarize the key findings from the prompt report" | `read_research_resource` | `name="the-prompt-report"` |
 | "Create a micro summary of https://youtu.be/abc123" | `execute_pattern` | `pattern="create_micro_summary"`, `input="https://youtu.be/abc123"` |

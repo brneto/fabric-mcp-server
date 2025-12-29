@@ -35,11 +35,15 @@ def _uri_to_path(uri: str) -> Optional[Path]:
     if parsed.scheme != "markdown":
         return None
 
-    path_parts = parsed.path.strip("/").split("/")
-    if len(path_parts) != 2 or path_parts[0] != "researches":
+    # urlparse treats "markdown://researches/title" as:
+    #   scheme="markdown", netloc="researches", path="/title"
+    if parsed.netloc != "researches":
         return None
 
-    slug = path_parts[1]
+    slug = parsed.path.strip("/")
+    if not slug or "/" in slug:
+        return None
+
     researches = get_available_researches()
     if slug in researches:
         return researches[slug]["path"]
@@ -239,11 +243,16 @@ def read_resource(uri: str) -> str | bytes:
     if parsed.scheme not in ("markdown", "pdf"):
         raise ValueError(f"Unsupported scheme: {parsed.scheme}")
 
-    path_parts = parsed.path.strip("/").split("/")
-    if len(path_parts) != 2 or path_parts[0] != "researches":
+    # urlparse treats "markdown://researches/title" as:
+    #   scheme="markdown", netloc="researches", path="/title"
+    # So we need to check netloc for "researches" and get title from path
+    if parsed.netloc != "researches":
         raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
 
-    paper_name = path_parts[1]
+    paper_name = parsed.path.strip("/")
+    if not paper_name or "/" in paper_name:
+        raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
+
     resource_type: ResourceType = "markdown" if parsed.scheme == "markdown" else "pdf"
 
     return _read_research_resource(paper_name, resource_type)

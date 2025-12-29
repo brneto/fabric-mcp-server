@@ -36,6 +36,7 @@ from .paths import (
 from .text import (
     humanize_name,
     extract_pattern_description,
+    slugify,
 )
 
 from .patterns import (
@@ -68,6 +69,7 @@ __all__ = [
     # Text
     "humanize_name",
     "extract_pattern_description",
+    "slugify",
     # Patterns
     "get_pattern_content",
     "list_all_patterns",
