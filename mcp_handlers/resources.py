@@ -52,25 +52,39 @@ def _path_to_uri(path: Path) -> Optional[str]:
     return f"markdown://researches/{slug}"
 
 
+async def _invoke_callback(callback: Callable[[str], Awaitable[None]], uri: str) -> None:
+    """Invoke the notification callback."""
+    await callback(uri)
+
+
+async def _process_file_change(path: Path, change_type) -> None:
+    """Process a single file change and notify if subscribed."""
+    # Only watch markdown files
+    if path.suffix != ".md":
+        return
+
+    uri = _path_to_uri(path)
+    if not uri or uri not in _subscribed_uris:
+        return
+
+    callback = _notification_callback
+    if callback is None:
+        return
+
+    logger.info(f"Resource changed: {uri} ({change_type.name})")
+    await _invoke_callback(callback, uri)
+
+
 async def _watch_resources():
     """Watch the resources directory for changes and notify subscribers."""
     try:
-        from watchfiles import awatch, Change
+        from watchfiles import awatch
 
         logger.info(f"Starting file watcher for: {MD_RESOURCES_DIR}")
 
         async for changes in awatch(MD_RESOURCES_DIR):
             for change_type, path_str in changes:
-                path = Path(path_str)
-
-                # Only watch markdown files
-                if path.suffix != ".md":
-                    continue
-
-                uri = _path_to_uri(path)
-                if uri and uri in _subscribed_uris and _notification_callback:
-                    logger.info(f"Resource changed: {uri} ({change_type.name})")
-                    await _notification_callback(uri)
+                await _process_file_change(Path(path_str), change_type)
 
     except asyncio.CancelledError:
         logger.info("File watcher stopped")
@@ -139,7 +153,7 @@ def list_resources() -> List[types.Resource]:
         resources.append(
             types.Resource(
                 uri=AnyUrl(f"markdown://researches/{slug}"),
-                name=info["human_name"],
+                name=f"{info['human_name']} (Markdown)",
                 description=f"Research paper (Markdown): {info['human_name']}",
                 mimeType="text/markdown"
             )

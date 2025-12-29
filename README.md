@@ -150,6 +150,8 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
           - execute_pattern
           - list_patterns
           - list_strategies
+          - list_research_resources
+          - read_research_resource
         prompts: []  # One prompt per pattern in the Fabric repository
         resources: {}
         metadata:
@@ -205,6 +207,8 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
 > - **Prompts**: For clients that support the `/` command interface
 > - **`execute_pattern` Tool**: So AI agents can run any pattern programmatically via natural language
 > - **`list_patterns` Tool**: So AI agents can discover available patterns
+> - **`list_research_resources` Tool**: So AI agents can discover available research documents
+> - **`read_research_resource` Tool**: So AI agents can read research documents via natural language
 > - **Resources**: Research documents accessible via `markdown://researches/{title}` and `pdf://researches/{title}` URIs
 
 ## Usage Examples
@@ -227,6 +231,11 @@ AI agents can use the available tools to discover and execute patterns:
 |------------------------|-------------|-----------|
 | "What Fabric patterns are available?" | `list_patterns` | - |
 | "Show me the available strategies" | `list_strategies` | - |
+| "What research documents are available?" | `list_research_resources` | - |
+| "List all research papers" | `list_research_resources` | - |
+| "Read the Prompt Report research paper" | `read_research_resource` | `name="the-prompt-report"` |
+| "Show me the content of the prompt report" | `read_research_resource` | `name="the-prompt-report"`, `format="markdown"` |
+| "Summarize the key findings from the prompt report" | `read_research_resource` | `name="the-prompt-report"` |
 | "Create a micro summary of https://youtu.be/abc123" | `execute_pattern` | `pattern="create_micro_summary"`, `input="https://youtu.be/abc123"` |
 | "Summarize this article with strategy cot: https://example.com/article" | `execute_pattern` | `pattern="summarize"`, `input="https://example.com/article"`, `strategy="cot"` |
 | "Extract wisdom using chain-of-thought from this text: [text]" | `execute_pattern` | `pattern="extract_wisdom"`, `input="[text]"`, `strategy="cot"` |
@@ -239,6 +248,29 @@ MCP Resources are data sources exposed by the server. Research documents are ava
 |-------------|-------------|
 | `markdown://researches/the-prompt-report` | The Prompt Report (Markdown format) |
 | `pdf://researches/the-prompt-report` | The Prompt Report (PDF format) |
+
+#### Accessing Resources via Client UI
+
+MCP Resources are accessed differently than Prompts. In Gemini CLI, use the `@` prefix to reference and embed resource content into your chat:
+
+| Feature | Access Method | Function |
+|---------|---------------|----------|
+| MCP Prompts | `/<name>` | Runs a pre-defined prompt template |
+| MCP Resources | `@<uri>` | Fetches and attaches data (files, docs) to your message |
+
+| Client Action | Result |
+|--------------|--------|
+| Type `@fabric:markdown://researches/the-prompt-report` | Embeds the markdown research document into your chat context |
+| Type `@fabric:pdf://researches/the-prompt-report` | Embeds the PDF research document into your chat context |
+
+**Tip**: Type `@` in Gemini CLI to see auto-completion for all available resources from connected MCP servers.
+
+**Example usage**:
+```
+@fabric:markdown://researches/the-prompt-report Summarize the key findings from this research paper
+```
+
+#### Adding New Resources
 
 To add new research documents:
 - Place markdown files in `resources/markdown/researches/`
