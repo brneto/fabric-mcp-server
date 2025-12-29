@@ -39,7 +39,16 @@ async def handle_list_tools() -> List[types.Tool]:
     return [
         types.Tool(
             name="list_strategies",
-            description="List all available strategies with their descriptions",
+            description="List all available strategies (used as argument of Fabric patterns prompts) with their descriptions",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="list_patterns",
+            description="List all available Fabric patterns (prompts) that can be used for content analysis",
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -54,13 +63,21 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
     """Handle tool invocations."""
     if name == "list_strategies":
         strategies = list_all_strategies()
-
         if not strategies:
             return [types.TextContent(type="text", text="No strategies found")]
-
         result = [
             f"- **{s['name']}**: {s['description']}"
             for s in strategies
+        ]
+        return [types.TextContent(type="text", text="\n".join(result))]
+
+    if name == "list_patterns":
+        patterns = list_all_patterns()
+        if not patterns:
+            return [types.TextContent(type="text", text="No patterns found")]
+        result = [
+            f"- **{p['name']}**: {p['description']}"
+            for p in patterns
         ]
         return [types.TextContent(type="text", text="\n".join(result))]
 
@@ -75,6 +92,20 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
 async def handle_list_prompts() -> List[types.Prompt]:
     """List all available Fabric patterns as prompts."""
     patterns = list_all_patterns()
+    strategies = list_all_strategies()
+
+    # Build a list of available strategy names for the description
+    strategy_names = [s["name"] for s in strategies]
+    strategy_list = ", ".join(strategy_names[:5])  # Show first 5
+    if len(strategy_names) > 5:
+        strategy_list += f", ... ({len(strategy_names)} total)"
+
+    strategy_description = (
+        f"Thinking strategy to enhance the analysis. "
+        f"Available strategies: {strategy_list}. "
+        f"Common strategies: 'cot' (chain-of-thought), 'tot' (tree-of-thought). "
+        f"When user says 'use strategy X', 'with strategy X', or 'using X strategy', set this to X."
+    )
 
     return [
         types.Prompt(
@@ -83,7 +114,7 @@ async def handle_list_prompts() -> List[types.Prompt]:
             arguments=[
                 types.PromptArgument(
                     name="strategy",
-                    description="Optional thinking strategy to apply (e.g., 'cot' for chain-of-thought). Use 'list_strategies' tool to see available options.",
+                    description=strategy_description,
                     required=False
                 ),
                 types.PromptArgument(

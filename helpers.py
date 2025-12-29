@@ -216,6 +216,9 @@ def list_all_patterns() -> List[dict]:
             else:
                 description = f"Fabric pattern: {human_name}"
 
+            # Add usage hint to help LLM understand how to invoke with strategy
+            description += " [Supports optional 'strategy' argument like 'cot', 'tot' for enhanced reasoning]"
+
             patterns.append({
                 "name": item.name,
                 "human_name": human_name,

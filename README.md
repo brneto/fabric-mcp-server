@@ -6,8 +6,10 @@ A Model Context Protocol (MCP) server that exposes [Daniel Miessler's Fabric](ht
 
 - **Dynamic Sync**: Clones or updates the Fabric repository every time the server starts.
 - **Pattern Prompts**: Automatically creates an MCP prompt for every folder in `patterns/`.
-- **Strategy Support**: Every prompt includes an optional `strategy` argument to prepend context from `strategies/`.
+- **Smart Descriptions**: Extracts meaningful descriptions from each pattern's `system.md` file to help LLMs understand when to use each pattern.
+- **Strategy Support**: Every prompt includes an optional `strategy` argument to prepend context from `strategies/`. Natural language phrases like "with strategy cot" or "using cot strategy" are recognized.
 - **User Input**: Every prompt requires an `input` argument for user-provided content (text, URL, etc.).
+- **List Patterns Tool**: Exposes a `list_patterns` tool so AI agents can discover available Fabric patterns programmatically.
 - **List Strategies Tool**: Exposes a `list_strategies` tool to discover available strategies and their descriptions.
 
 ## Prerequisites
@@ -111,6 +113,7 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
         type: server
         image: fabric-mcp-server:latest
         tools:
+          - list_patterns
           - list_strategies
         prompts: []  # One prompt per pattern in the Fabric repository
         resources: {}
@@ -147,4 +150,53 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
    - When you select a prompt (e.g., `extract_wisdom`), it reads the `system.md` file.
    - If you provide a `strategy` (e.g., `cot`), it fetches the strategy JSON, extracts the prompt content, and **prepends** it to the system message.
    - The `input` argument content is **appended** to the end of the prompt.
-4. **Tools**: Use `list_strategies` to discover available strategies and their descriptions.
+4. **Tools**: 
+   - Use `list_patterns` to discover all available Fabric patterns.
+   - Use `list_strategies` to discover available strategies and their descriptions.
+
+## MCP Prompts vs Tools
+
+> **Important Note**: In the strict Model Context Protocol (MCP) definition, **Prompts** are templates exposed by servers for the client (you) to use, while **Tools** are functions the AI agent can call directly.
+>
+> As an AI agent, LLMs primarily see Tools. They may not have direct visibility into user-facing Prompts (like `analyze_bill_short` or `youtube_summary`) from connected MCP servers. Those are typically accessed via your client's UI (e.g., typing `/` in your chat interface with Claude Desktop).
+>
+> This is why we expose both:
+> - **Prompts**: For clients that support the `/` command interface
+> - **`list_patterns` Tool**: So AI agents can programmatically discover and reference available patterns
+
+## Usage Examples
+
+### Using Prompts via Client UI
+
+MCP Prompts are accessed through your client's UI. For example, in Claude Desktop, type `/` followed by the pattern name:
+
+| Client Action | Result |
+|--------------|--------|
+| Type `/create_micro_summary` | Invokes the pattern with prompts for `input` (required) and `strategy` (optional) |
+| Type `/summarize` | Invokes the summarize pattern |
+| Type `/extract_wisdom` | Invokes the extract wisdom pattern |
+
+### Using Tools via Natural Language
+
+AI agents can use the available tools to discover patterns and strategies:
+
+| Natural Language Prompt | Tool Called |
+|------------------------|-------------|
+| "What Fabric patterns are available?" | `list_patterns` |
+| "Show me the available strategies" | `list_strategies` |
+| "List all patterns for summarization" | `list_patterns` (then filters results) |
+
+### Prompt Arguments
+
+When invoking a prompt (via `/` command), you can provide:
+
+| Argument | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `input` | Yes | The content to analyze (text, URL, etc.) | `https://youtu.be/abc123` |
+| `strategy` | No | Thinking strategy to enhance analysis | `cot`, `tot` |
+
+**Tip**: For best results when using strategies, include phrases like:
+- "with strategy cot"
+- "using strategy tot"  
+- "apply cot strategy"
+
