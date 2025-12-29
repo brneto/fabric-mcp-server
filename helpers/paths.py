@@ -7,11 +7,20 @@ This module contains functions for:
 """
 
 from pathlib import Path
-from typing import List
+from typing import List, Literal
 
 from ._types import ResearchInfo
 
-from .config import REPO_PATH, PATTERNS_DIRS, STRATEGIES_DIRS, RESOURCES_DIR
+from .config import REPO_PATH, PATTERNS_DIRS, STRATEGIES_DIRS, MD_RESOURCES_DIR, PDF_RESOURCES_DIR
+
+# Type alias for resource types
+ResourceType = Literal["markdown", "pdf"]
+
+# Mapping of resource types to their configurations
+_RESOURCE_CONFIG = {
+    "markdown": {"dir": MD_RESOURCES_DIR, "extension": "*.md"},
+    "pdf": {"dir": PDF_RESOURCES_DIR, "extension": "*.pdf"},
+}
 
 
 def get_dir_content(base_path: Path, possible_dirs: List[str]) -> Path:
@@ -33,22 +42,32 @@ def get_strategies_dir() -> Path:
     return get_dir_content(REPO_PATH, STRATEGIES_DIRS)
 
 
-def get_available_researches() -> dict[str, ResearchInfo]:
+def get_available_researches(resource_type: ResourceType = "markdown") -> dict[str, ResearchInfo]:
     """
-    Dynamically discover all markdown files in the researches folder.
-    Returns a dict mapping slug (e.g., 'the-prompt-report') to a dict with 'path' and 'human_name'.
+    Dynamically discover research files in the specified resources folder.
+
+    Args:
+        resource_type: Type of resource to discover ("markdown" or "pdf")
+
+    Returns:
+        Dict mapping slug (e.g., 'the-prompt-report') to ResearchInfo with 'path' and 'human_name'.
     """
+    config = _RESOURCE_CONFIG[resource_type]
+    resources_dir = config["dir"]
+    extension = config["extension"]
+
     file_map = {}
-    if RESOURCES_DIR.exists():
-        for md_file in RESOURCES_DIR.glob("*.md"):
+    if resources_dir.exists():
+        for resource_file in resources_dir.glob(extension):
             # Convert filename to URL-friendly slug
             # e.g., 'The_Prompt_Report.md' -> 'the-prompt-report'
-            slug = md_file.stem.lower().replace("_", "-").replace(" ", "-")
+            slug = resource_file.stem.lower().replace("_", "-").replace(" ", "-")
             # Create a human-readable name from the filename
-            human_name = md_file.stem.replace("_", " ").replace("-", " ").title()
+            human_name = resource_file.stem.replace("_", " ").replace("-", " ").title()
             file_map[slug] = ResearchInfo(
-                path=md_file,
+                path=resource_file,
                 human_name=human_name
             )
     return file_map
+
 

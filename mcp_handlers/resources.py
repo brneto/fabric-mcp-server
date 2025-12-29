@@ -3,8 +3,9 @@ MCP Resources for the Fabric MCP Server.
 
 This module contains resource handlers for:
 - Research documents in markdown format
-- Dynamic resource discovery from the resources folder
-- Resource subscription for change notifications
+- Research documents in PDF format
+- Dynamic resource discovery from the resources folders
+- Resource subscription for change notifications (markdown only)
 """
 
 import asyncio
@@ -16,8 +17,8 @@ from urllib.parse import urlparse
 from pydantic import AnyUrl
 import mcp.types as types
 
-from helpers import get_available_researches
-from helpers.config import RESOURCES_DIR
+from helpers import get_available_researches, ResourceType
+from helpers.config import MD_RESOURCES_DIR
 
 # Configure logging
 logger = logging.getLogger("fabric-mcp-server")
@@ -56,9 +57,9 @@ async def _watch_resources():
     try:
         from watchfiles import awatch, Change
 
-        logger.info(f"Starting file watcher for: {RESOURCES_DIR}")
+        logger.info(f"Starting file watcher for: {MD_RESOURCES_DIR}")
 
-        async for changes in awatch(RESOURCES_DIR):
+        async for changes in awatch(MD_RESOURCES_DIR):
             for change_type, path_str in changes:
                 path = Path(path_str)
 
@@ -128,19 +129,30 @@ def unsubscribe(uri: str) -> None:
 
 def list_resources() -> List[types.Resource]:
     """
-    List all available research documents.
+    List all available research documents (markdown and PDF).
     This allows clients to discover available resources before using the template.
     """
-    researches = get_available_researches()
     resources = []
 
-    for slug, info in researches.items():
+    # Add markdown resources
+    for slug, info in get_available_researches("markdown").items():
         resources.append(
             types.Resource(
                 uri=AnyUrl(f"markdown://researches/{slug}"),
                 name=info["human_name"],
-                description=f"Research paper: {info['human_name']}",
+                description=f"Research paper (Markdown): {info['human_name']}",
                 mimeType="text/markdown"
+            )
+        )
+
+    # Add PDF resources
+    for slug, info in get_available_researches("pdf").items():
+        resources.append(
+            types.Resource(
+                uri=AnyUrl(f"pdf://researches/{slug}"),
+                name=f"{info['human_name']} (PDF)",
+                description=f"Research paper (PDF): {info['human_name']}",
+                mimeType="application/pdf"
             )
         )
 
@@ -149,48 +161,76 @@ def list_resources() -> List[types.Resource]:
 
 def list_resource_templates() -> List[types.ResourceTemplate]:
     """
-    Expose the custom URI pattern to clients.
+    Expose the custom URI patterns to clients.
     """
-    # Build list of available titles for the description
-    researches = get_available_researches()
-    available_titles = ", ".join(researches.keys()) if researches else "none available"
+    # Build list of available titles for markdown
+    md_researches = get_available_researches("markdown")
+    available_md_titles = ", ".join(md_researches.keys()) if md_researches else "none available"
+
+    # Build list of available titles for PDF
+    pdf_researches = get_available_researches("pdf")
+    available_pdf_titles = ", ".join(pdf_researches.keys()) if pdf_researches else "none available"
 
     return [
         types.ResourceTemplate(
             uriTemplate="markdown://researches/{title}",
             name="Markdown Researches",
-            description=f"Access markdown researches by title. Available titles: {available_titles}",
+            description=f"Access markdown researches by title. Available titles: {available_md_titles}",
             mimeType="text/markdown"
+        ),
+        types.ResourceTemplate(
+            uriTemplate="pdf://researches/{title}",
+            name="PDF Researches",
+            description=f"Access PDF researches by title. Available titles: {available_pdf_titles}",
+            mimeType="application/pdf"
         )
     ]
 
 
-def read_resource(uri: str) -> str:
+def _read_research_resource(paper_name: str, resource_type: ResourceType) -> str | bytes:
     """
-    Handle requests for the custom URI.
+    Read a research document by name and type.
+
+    Args:
+        paper_name: The slug name of the paper
+        resource_type: Type of resource ("markdown" or "pdf")
+
+    Returns:
+        Text content for markdown, bytes for PDF.
+    """
+    file_map = get_available_researches(resource_type)
+
+    if paper_name not in file_map:
+        available = ", ".join(file_map.keys()) if file_map else "none"
+        raise ValueError(f"{resource_type.capitalize()} paper '{paper_name}' not found. Available: {available}")
+
+    file_path = file_map[paper_name]["path"]
+    try:
+        if resource_type == "markdown":
+            return file_path.read_text(encoding="utf-8")
+        else:
+            return file_path.read_bytes()
+    except OSError:
+        raise ValueError(f"Failed to read {resource_type} file for '{paper_name}'.")
+
+
+def read_resource(uri: str) -> str | bytes:
+    """
+    Handle requests for markdown and PDF resources.
+    Returns text for markdown, bytes for PDF.
     """
     parsed = urlparse(str(uri))
 
-    # 1. Validate the scheme and path structure
-    if parsed.scheme != "markdown":
+    # Validate the scheme
+    if parsed.scheme not in ("markdown", "pdf"):
         raise ValueError(f"Unsupported scheme: {parsed.scheme}")
 
     path_parts = parsed.path.strip("/").split("/")
     if len(path_parts) != 2 or path_parts[0] != "researches":
-        raise ValueError("Invalid URI format. Expected markdown://researches/{title}")
+        raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
 
     paper_name = path_parts[1]
+    resource_type: ResourceType = "markdown" if parsed.scheme == "markdown" else "pdf"
 
-    # 2. Dynamically get available researches
-    file_map = get_available_researches()
+    return _read_research_resource(paper_name, resource_type)
 
-    if paper_name not in file_map:
-        available = ", ".join(file_map.keys()) if file_map else "none"
-        raise ValueError(f"Paper '{paper_name}' not found. Available: {available}")
-
-    # 3. Read and return the content
-    file_path = file_map[paper_name]["path"]
-    try:
-        return file_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise ValueError(f"File for '{paper_name}' not found.")

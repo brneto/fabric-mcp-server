@@ -16,7 +16,8 @@ from .config import (
     REPO_PATH,
     PATTERNS_DIRS,
     STRATEGIES_DIRS,
-    RESOURCES_DIR,
+    MD_RESOURCES_DIR,
+    PDF_RESOURCES_DIR,
 )
 
 from .repo import (
@@ -29,6 +30,7 @@ from .paths import (
     get_patterns_dir,
     get_strategies_dir,
     get_available_researches,
+    ResourceType,
 )
 
 from .text import (
@@ -52,7 +54,8 @@ __all__ = [
     "REPO_PATH",
     "PATTERNS_DIRS",
     "STRATEGIES_DIRS",
-    "RESOURCES_DIR",
+    "MD_RESOURCES_DIR",
+    "PDF_RESOURCES_DIR",
     # Repo
     "run_command",
     "sync_repo",
@@ -61,6 +64,7 @@ __all__ = [
     "get_patterns_dir",
     "get_strategies_dir",
     "get_available_researches",
+    "ResourceType",
     # Text
     "humanize_name",
     "extract_pattern_description",

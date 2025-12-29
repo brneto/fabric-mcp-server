@@ -15,6 +15,7 @@ REPO_PATH = Path("/app/data/fabric")
 PATTERNS_DIRS = ["data/patterns", "patterns"]
 STRATEGIES_DIRS = ["data/strategies", "strategies"]
 
-# Local resources directory
-RESOURCES_DIR = Path(__file__).parent.parent / "resources" / "markdown" / "researches"
+# Local resources directories
+MD_RESOURCES_DIR = Path(__file__).parent.parent / "resources" / "markdown" / "researches"
+PDF_RESOURCES_DIR = Path(__file__).parent.parent / "resources" / "pdf" / "researches"
 

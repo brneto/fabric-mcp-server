@@ -12,8 +12,8 @@ A Model Context Protocol (MCP) server that exposes [Daniel Miessler's Fabric](ht
 - **Execute Pattern Tool**: Exposes an `execute_pattern` tool so AI agents can execute any Fabric pattern programmatically with optional strategy.
 - **List Patterns Tool**: Exposes a `list_patterns` tool so AI agents can discover available Fabric patterns programmatically.
 - **List Strategies Tool**: Exposes a `list_strategies` tool to discover available strategies and their descriptions.
-- **Research Resources**: Exposes markdown research documents as MCP resources, accessible via custom URIs (e.g., `markdown://researches/the-prompt-report`).
-- **Resource Subscriptions**: Supports subscribing to resource changes, notifying clients when markdown files are modified.
+- **Research Resources**: Exposes research documents as MCP resources in both markdown and PDF formats, accessible via custom URIs (e.g., `markdown://researches/the-prompt-report`, `pdf://researches/the-prompt-report`).
+- **Resource Subscriptions**: Supports subscribing to markdown resource changes, notifying clients when files are modified.
 
 ## Project Structure
 
@@ -40,8 +40,10 @@ fabric-mcp-server/
 │   └── prompts.py         # Prompt handlers (Fabric patterns as prompts)
 │
 └── resources/
-    └── markdown/
-        └── researches/    # Markdown research documents exposed as MCP resources
+    ├── markdown/
+    │   └── researches/    # Markdown research documents exposed as MCP resources
+    └── pdf/
+        └── researches/    # PDF research documents exposed as MCP resources
 ```
 
 ## Prerequisites
@@ -114,7 +116,7 @@ If you are using a gateway that supports running servers via a direct command st
 docker run -i --rm fabric-mcp-server
 ```
 
-### 4. Usage via Docker MCP Gateway
+### 5. Usage via Docker MCP Gateway
 
 If you are using the **Docker MCP Gateway** CLI, you can run this server directly using:
 
@@ -122,7 +124,7 @@ If you are using the **Docker MCP Gateway** CLI, you can run this server directl
 docker mcp gateway run fabric-mcp-server
 ```
 
-### 5. Global Registration (Docker MCP Catalog)
+### 6. Global Registration (Docker MCP Catalog)
 
 To make this server visible to all Docker MCP clients (like the `docker mcp` CLI) using the configuration files in `~/.docker/mcp/`:
 
@@ -179,8 +181,8 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
 
 1. **Startup**: The server clones `https://github.com/danielmiessler/fabric` into the container.
 2. **Prompts**: It scans folders like `extract_wisdom`, `summarize`, etc. in `patterns/`.
-3. **Resources**: It scans the `resources/markdown/researches/` folder for markdown files and exposes them as MCP resources with custom URIs.
-4. **Subscriptions**: Clients can subscribe to resource changes. The server monitors the resources folder and sends notifications when files are modified.
+3. **Resources**: It scans the `resources/markdown/researches/` and `resources/pdf/researches/` folders for research documents and exposes them as MCP resources with custom URIs.
+4. **Subscriptions**: Clients can subscribe to markdown resource changes. The server monitors the markdown resources folder and sends notifications when files are modified (PDF subscriptions are not supported).
 5. **Execution**:
    - When you select a prompt (e.g., `extract_wisdom`), it reads the `system.md` file.
    - If you provide a `strategy` (e.g., `cot`), it fetches the strategy JSON, extracts the prompt content, and **prepends** it to the system message.
@@ -203,7 +205,7 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
 > - **Prompts**: For clients that support the `/` command interface
 > - **`execute_pattern` Tool**: So AI agents can run any pattern programmatically via natural language
 > - **`list_patterns` Tool**: So AI agents can discover available patterns
-> - **Resources**: Research documents accessible via `markdown://researches/{title}` URIs
+> - **Resources**: Research documents accessible via `markdown://researches/{title}` and `pdf://researches/{title}` URIs
 
 ## Usage Examples
 
@@ -231,22 +233,29 @@ AI agents can use the available tools to discover and execute patterns:
 
 ### Using Resources
 
-MCP Resources are data sources exposed by the server. Research documents are available via custom URIs:
+MCP Resources are data sources exposed by the server. Research documents are available in both markdown and PDF formats via custom URIs:
 
 | Resource URI | Description |
 |-------------|-------------|
-| `markdown://researches/the-prompt-report` | The Prompt Report research document |
+| `markdown://researches/the-prompt-report` | The Prompt Report (Markdown format) |
+| `pdf://researches/the-prompt-report` | The Prompt Report (PDF format) |
 
-To add new research documents, place markdown files in the `resources/markdown/researches/` folder. They will be automatically discovered and exposed with a URL-friendly slug based on the filename.
+To add new research documents:
+- Place markdown files in `resources/markdown/researches/`
+- Place PDF files in `resources/pdf/researches/`
+
+Files will be automatically discovered and exposed with a URL-friendly slug based on the filename.
 
 #### Resource Subscriptions
 
-Clients can subscribe to resource changes to receive notifications when files are modified:
+Clients can subscribe to **markdown** resource changes to receive notifications when files are modified:
 
-- **Subscribe**: Call `resources/subscribe` with the resource URI to start receiving change notifications
+- **Subscribe**: Call `resources/subscribe` with a markdown resource URI to start receiving change notifications
 - **Unsubscribe**: Call `resources/unsubscribe` to stop receiving notifications
 
 When a subscribed markdown file is modified, the server sends a `notifications/resources/updated` notification to the client.
+
+> **Note**: PDF resources do not support subscriptions.
 
 ### Prompt Arguments
 
