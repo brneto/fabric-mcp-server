@@ -6,8 +6,6 @@ This module contains prompt handlers for:
 - Getting specific prompts with optional strategy and input
 """
 
-from typing import List, Optional
-
 import mcp.types as types
 
 from helpers import (
@@ -18,7 +16,7 @@ from helpers import (
 )
 
 
-def list_prompts() -> List[types.Prompt]:
+def list_prompts() -> list[types.Prompt]:
     """List all available Fabric patterns as prompts."""
     patterns = list_all_patterns()
     strategies = list_all_strategies()
@@ -58,7 +56,7 @@ def list_prompts() -> List[types.Prompt]:
     ]
 
 
-def get_prompt(name: str, arguments: Optional[dict[str, str]]) -> types.GetPromptResult:
+def get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
     """Get a specific prompt by name with optional strategy and input."""
     content = get_pattern_content(name)
 

@@ -7,14 +7,13 @@ This module contains functions for:
 """
 
 import json
-from typing import List, Optional
 
 from ._types import StrategyContent, StrategyInfo
 
 from .paths import get_strategies_dir
 
 
-def get_strategy_content(name: str) -> Optional[StrategyContent]:
+def get_strategy_content(name: str) -> StrategyContent | None:
     """Load a strategy JSON file and return its content."""
     strategies_dir = get_strategies_dir()
     strategy_file = strategies_dir / f"{name}.json"
@@ -33,7 +32,7 @@ def get_strategy_content(name: str) -> Optional[StrategyContent]:
         return None
 
 
-def list_all_strategies() -> List[StrategyInfo]:
+def list_all_strategies() -> list[StrategyInfo]:
     """
     List all available strategies with their metadata.
 

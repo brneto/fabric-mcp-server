@@ -6,16 +6,13 @@ This module contains functions for:
 - Listing all available patterns
 """
 
-from pathlib import Path
-from typing import List, Optional
-
 from ._types import PatternInfo
 
 from .paths import get_patterns_dir
 from .text import humanize_name, extract_pattern_description
 
 
-def get_pattern_content(name: str) -> Optional[str]:
+def get_pattern_content(name: str) -> str | None:
     """Read the system.md content for a given pattern name."""
     patterns_dir = get_patterns_dir()
     pattern_file = patterns_dir / name / "system.md"
@@ -26,7 +23,7 @@ def get_pattern_content(name: str) -> Optional[str]:
     return pattern_file.read_text(encoding="utf-8")
 
 
-def list_all_patterns() -> List[PatternInfo]:
+def list_all_patterns() -> list[PatternInfo]:
     """
     List all available patterns with their metadata.
 

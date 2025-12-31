@@ -42,4 +42,3 @@ __all__ = [
     "get_prompt",
 ]
 
-

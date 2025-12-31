@@ -7,7 +7,7 @@ This module contains functions for:
 """
 
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 
 from ._types import ResearchInfo
 
@@ -23,7 +23,7 @@ _RESOURCE_CONFIG = {
 }
 
 
-def get_dir_content(base_path: Path, possible_dirs: List[str]) -> Path:
+def get_dir_content(base_path: Path, possible_dirs: list[str]) -> Path:
     """Find the first existing directory from a list of possible paths."""
     for d in possible_dirs:
         path = base_path / d

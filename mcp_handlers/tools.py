@@ -9,8 +9,6 @@ This module contains tool handlers for:
 - read_research_resource: Read a specific research document
 """
 
-from typing import List
-
 import mcp.types as types
 
 from helpers import (
@@ -24,7 +22,7 @@ from helpers import (
 from mcp_handlers.resources import read_resource
 
 
-def get_tools() -> List[types.Tool]:
+def get_tools() -> list[types.Tool]:
     """Return the list of available tools."""
     return [
         types.Tool(
@@ -98,7 +96,7 @@ def get_tools() -> List[types.Tool]:
     ]
 
 
-def _handle_list_strategies() -> List[types.TextContent]:
+def _handle_list_strategies() -> list[types.TextContent]:
     """Handle the list_strategies tool."""
     strategies = list_all_strategies()
     if not strategies:
@@ -110,7 +108,7 @@ def _handle_list_strategies() -> List[types.TextContent]:
     return [types.TextContent(type="text", text="\n".join(result))]
 
 
-def _handle_list_patterns() -> List[types.TextContent]:
+def _handle_list_patterns() -> list[types.TextContent]:
     """Handle the list_patterns tool."""
     patterns = list_all_patterns()
     if not patterns:
@@ -122,7 +120,7 @@ def _handle_list_patterns() -> List[types.TextContent]:
     return [types.TextContent(type="text", text="\n".join(result))]
 
 
-def _handle_execute_pattern(arguments: dict) -> List[types.TextContent]:
+def _handle_execute_pattern(arguments: dict) -> list[types.TextContent]:
     """Handle the execute_pattern tool."""
     pattern_name = arguments.get("pattern")
     user_input = arguments.get("input")
@@ -150,7 +148,7 @@ def _handle_execute_pattern(arguments: dict) -> List[types.TextContent]:
     return [types.TextContent(type="text", text=content)]
 
 
-def _handle_list_research_resources() -> List[types.TextContent]:
+def _handle_list_research_resources() -> list[types.TextContent]:
     """Handle the list_research_resources tool."""
     resources = []
 
@@ -171,7 +169,7 @@ def _handle_list_research_resources() -> List[types.TextContent]:
     return [types.TextContent(type="text", text=result)]
 
 
-def _handle_read_research_resource(arguments: dict) -> List[types.TextContent]:
+def _handle_read_research_resource(arguments: dict) -> list[types.TextContent]:
     """Handle the read_research_resource tool."""
     resource_name = arguments.get("name")
     resource_format = arguments.get("format", "markdown")
@@ -209,10 +207,9 @@ _TOOL_HANDLERS = {
 }
 
 
-def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
+def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool invocations."""
     handler = _TOOL_HANDLERS.get(name)
     if handler is None:
         raise ValueError(f"Unknown tool: {name}")
     return handler(arguments)
-

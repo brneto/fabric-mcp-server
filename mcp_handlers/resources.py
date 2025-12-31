@@ -10,8 +10,8 @@ This module contains resource handlers for:
 
 import asyncio
 import logging
+from collections.abc import Callable, Awaitable
 from pathlib import Path
-from typing import List, Set, Callable, Awaitable, Optional
 from urllib.parse import urlparse
 
 from pydantic import AnyUrl
@@ -24,12 +24,12 @@ from helpers.config import MD_RESOURCES_DIR
 logger = logging.getLogger("fabric-mcp-server")
 
 # Track active subscriptions
-_subscribed_uris: Set[str] = set()
-_watch_task: Optional[asyncio.Task] = None
-_notification_callback: Optional[Callable[[str], Awaitable[None]]] = None
+_subscribed_uris: set[str] = set()
+_watch_task: asyncio.Task | None = None
+_notification_callback: Callable[[str], Awaitable[None]] | None = None
 
 
-def _uri_to_path(uri: str) -> Optional[Path]:
+def _uri_to_path(uri: str) -> Path | None:
     """Convert a resource URI to its file path."""
     parsed = urlparse(str(uri))
     if parsed.scheme != "markdown":
@@ -50,7 +50,7 @@ def _uri_to_path(uri: str) -> Optional[Path]:
     return None
 
 
-def _path_to_uri(path: Path) -> Optional[str]:
+def _path_to_uri(path: Path) -> str | None:
     """Convert a file path to its resource URI."""
     slug = path.stem.lower().replace("_", "-").replace(" ", "-")
     return f"markdown://researches/{slug}"
@@ -116,8 +116,13 @@ def subscribe(uri: str) -> None:
     if parsed.scheme != "markdown":
         raise ValueError(f"Unsupported scheme for subscription: {parsed.scheme}")
 
-    path_parts = parsed.path.strip("/").split("/")
-    if len(path_parts) != 2 or path_parts[0] != "researches":
+    # urlparse treats "markdown://researches/title" as:
+    #   scheme="markdown", netloc="researches", path="/title"
+    if parsed.netloc != "researches":
+        raise ValueError("Invalid URI format for subscription")
+
+    title = parsed.path.strip("/")
+    if not title or "/" in title:
         raise ValueError("Invalid URI format for subscription")
 
     # Add to subscriptions
@@ -145,7 +150,7 @@ def unsubscribe(uri: str) -> None:
         _watch_task.cancel()
 
 
-def list_resources() -> List[types.Resource]:
+def list_resources() -> list[types.Resource]:
     """
     List all available research documents (markdown and PDF).
     This allows clients to discover available resources before using the template.
@@ -177,7 +182,7 @@ def list_resources() -> List[types.Resource]:
     return resources
 
 
-def list_resource_templates() -> List[types.ResourceTemplate]:
+def list_resource_templates() -> list[types.ResourceTemplate]:
     """
     Expose the custom URI patterns to clients.
     """
