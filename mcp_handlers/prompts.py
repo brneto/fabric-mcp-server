@@ -9,10 +9,9 @@ This module contains prompt handlers for:
 import mcp.types as types
 
 from helpers import (
-    get_strategy_content,
-    get_pattern_content,
     list_all_patterns,
     list_all_strategies,
+    build_prompt,
 )
 
 
@@ -58,23 +57,13 @@ def list_prompts() -> list[types.Prompt]:
 
 def get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
     """Get a specific prompt by name with optional strategy and input."""
-    content = get_pattern_content(name)
+    strategy_name = arguments.get("strategy") if arguments else None
+    user_input = arguments.get("input") if arguments else None
 
-    if content is None:
-        raise ValueError(f"Pattern '{name}' not found")
-
-    # Prepend strategy if provided
-    if arguments and arguments.get("strategy"):
-        strategy_name = arguments["strategy"]
-        strategy = get_strategy_content(strategy_name)
-        if not strategy:
-            raise ValueError(f"Strategy '{strategy_name}' not found")
-        content = f"{strategy.get('prompt')}\n\n{content}"
-
-    # Append user input if provided
-    if arguments and arguments.get("input"):
-        user_input = arguments["input"]
-        content += f"\n{user_input}"
+    try:
+        content = build_prompt(name, user_input, strategy_name)
+    except ValueError as e:
+        raise ValueError(str(e))
 
     return types.GetPromptResult(
         messages=[

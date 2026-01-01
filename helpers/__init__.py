@@ -30,7 +30,11 @@ from .paths import (
     get_patterns_dir,
     get_strategies_dir,
     get_available_researches,
+)
+
+from ._types import (
     ResourceType,
+    ParsedResourceUri,
 )
 
 from .text import (
@@ -49,6 +53,10 @@ from .strategies import (
     list_all_strategies,
 )
 
+from .prompt_builder import (
+    build_prompt,
+)
+
 __all__ = [
     # Config
     "REPO_URL",
@@ -65,7 +73,9 @@ __all__ = [
     "get_patterns_dir",
     "get_strategies_dir",
     "get_available_researches",
+    # Types
     "ResourceType",
+    "ParsedResourceUri",
     # Text
     "humanize_name",
     "extract_pattern_description",
@@ -76,5 +86,7 @@ __all__ = [
     # Strategies
     "get_strategy_content",
     "list_all_strategies",
+    # Prompt Builder
+    "build_prompt",
 ]
 

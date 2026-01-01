@@ -9,7 +9,23 @@ and avoids conflict with Python's built-in 'types' module.
 """
 
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
+
+
+# Type alias for resource types
+ResourceType = Literal["markdown", "pdf"]
+
+
+class ParsedResourceUri:
+    """Parsed components of a resource URI."""
+    def __init__(self, scheme: str, slug: str):
+        self.scheme = scheme
+        self.slug = slug
+
+    @property
+    def resource_type(self) -> ResourceType:
+        """Return the resource type based on scheme."""
+        return "markdown" if self.scheme == "markdown" else "pdf"
 
 
 class ResearchInfo(TypedDict):

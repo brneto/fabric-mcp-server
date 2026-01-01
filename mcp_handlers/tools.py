@@ -12,12 +12,11 @@ This module contains tool handlers for:
 import mcp.types as types
 
 from helpers import (
-    get_strategy_content,
-    get_pattern_content,
     list_all_patterns,
     list_all_strategies,
     get_available_researches,
     slugify,
+    build_prompt,
 )
 from mcp_handlers.resources import read_resource
 
@@ -131,19 +130,16 @@ def _handle_execute_pattern(arguments: dict) -> list[types.TextContent]:
     if not user_input:
         raise ValueError("Input is required")
 
-    content = get_pattern_content(pattern_name)
-    if content is None:
-        raise ValueError(f"Pattern '{pattern_name}' not found. Use list_patterns to see available patterns.")
-
-    # Prepend strategy if provided
-    if strategy_name:
-        strategy = get_strategy_content(strategy_name)
-        if not strategy:
-            raise ValueError(f"Strategy '{strategy_name}' not found. Use list_strategies to see available strategies.")
-        content = f"{strategy.get('prompt')}\n\n{content}"
-
-    # Append user input
-    content += f"{user_input}"
+    try:
+        content = build_prompt(pattern_name, user_input, strategy_name)
+    except ValueError as e:
+        # Enhance error messages with helpful hints
+        error_msg = str(e)
+        if "Pattern" in error_msg:
+            raise ValueError(f"{error_msg}. Use list_patterns to see available patterns.")
+        if "Strategy" in error_msg:
+            raise ValueError(f"{error_msg}. Use list_strategies to see available strategies.")
+        raise
 
     return [types.TextContent(type="text", text=content)]
 

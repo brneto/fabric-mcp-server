@@ -7,14 +7,12 @@ This module contains functions for:
 """
 
 from pathlib import Path
-from typing import Literal
 
-from ._types import ResearchInfo
+from ._types import ResearchInfo, ResourceType
 
 from .config import REPO_PATH, PATTERNS_DIRS, STRATEGIES_DIRS, MD_RESOURCES_DIR, PDF_RESOURCES_DIR
+from .text import slugify, humanize_name
 
-# Type alias for resource types
-ResourceType = Literal["markdown", "pdf"]
 
 # Mapping of resource types to their configurations
 _RESOURCE_CONFIG = {
@@ -59,11 +57,10 @@ def get_available_researches(resource_type: ResourceType = "markdown") -> dict[s
     file_map = {}
     if resources_dir.exists():
         for resource_file in resources_dir.glob(extension):
-            # Convert filename to URL-friendly slug
-            # e.g., 'The_Prompt_Report.md' -> 'the-prompt-report'
-            slug = resource_file.stem.lower().replace("_", "-").replace(" ", "-")
+            # Convert filename to URL-friendly slug using centralized slugify
+            slug = slugify(resource_file.stem)
             # Create a human-readable name from the filename
-            human_name = resource_file.stem.replace("_", " ").replace("-", " ").title()
+            human_name = humanize_name(resource_file.stem)
             file_map[slug] = ResearchInfo(
                 path=resource_file,
                 human_name=human_name

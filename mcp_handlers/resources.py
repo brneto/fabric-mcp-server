@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from pydantic import AnyUrl
 import mcp.types as types
 
-from helpers import get_available_researches, ResourceType
+from helpers import get_available_researches, ResourceType, slugify, ParsedResourceUri
 from helpers.config import MD_RESOURCES_DIR
 
 # Configure logging
@@ -29,30 +29,59 @@ _watch_task: asyncio.Task | None = None
 _notification_callback: Callable[[str], Awaitable[None]] | None = None
 
 
-def _uri_to_path(uri: str) -> Path | None:
-    """Convert a resource URI to its file path."""
+
+def _parse_resource_uri(
+    uri: str,
+    allowed_schemes: tuple[str, ...] = ("markdown", "pdf")
+) -> ParsedResourceUri:
+    """
+    Parse and validate a resource URI.
+
+    Args:
+        uri: The URI to parse (e.g., "markdown://researches/the-prompt-report")
+        allowed_schemes: Tuple of allowed URI schemes
+
+    Returns:
+        ParsedResourceUri with scheme and slug
+
+    Raises:
+        ValueError: If the URI format is invalid
+    """
     parsed = urlparse(str(uri))
-    if parsed.scheme != "markdown":
-        return None
+
+    if parsed.scheme not in allowed_schemes:
+        if len(allowed_schemes) == 1:
+            raise ValueError(f"Unsupported scheme: {parsed.scheme}. Expected: {allowed_schemes[0]}")
+        raise ValueError(f"Unsupported scheme: {parsed.scheme}")
 
     # urlparse treats "markdown://researches/title" as:
     #   scheme="markdown", netloc="researches", path="/title"
     if parsed.netloc != "researches":
-        return None
+        raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
 
     slug = parsed.path.strip("/")
     if not slug or "/" in slug:
+        raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
+
+    return ParsedResourceUri(scheme=parsed.scheme, slug=slug)
+
+
+def _uri_to_path(uri: str) -> Path | None:
+    """Convert a resource URI to its file path."""
+    try:
+        parsed = _parse_resource_uri(uri, allowed_schemes=("markdown",))
+    except ValueError:
         return None
 
     researches = get_available_researches()
-    if slug in researches:
-        return researches[slug]["path"]
+    if parsed.slug in researches:
+        return researches[parsed.slug]["path"]
     return None
 
 
 def _path_to_uri(path: Path) -> str | None:
     """Convert a file path to its resource URI."""
-    slug = path.stem.lower().replace("_", "-").replace(" ", "-")
+    slug = slugify(path.stem)
     return f"markdown://researches/{slug}"
 
 
@@ -111,19 +140,8 @@ def subscribe(uri: str) -> None:
     """
     global _watch_task
 
-    # Validate the URI
-    parsed = urlparse(str(uri))
-    if parsed.scheme != "markdown":
-        raise ValueError(f"Unsupported scheme for subscription: {parsed.scheme}")
-
-    # urlparse treats "markdown://researches/title" as:
-    #   scheme="markdown", netloc="researches", path="/title"
-    if parsed.netloc != "researches":
-        raise ValueError("Invalid URI format for subscription")
-
-    title = parsed.path.strip("/")
-    if not title or "/" in title:
-        raise ValueError("Invalid URI format for subscription")
+    # Validate the URI using centralized parser (markdown only for subscriptions)
+    _parse_resource_uri(uri, allowed_schemes=("markdown",))
 
     # Add to subscriptions
     _subscribed_uris.add(str(uri))
@@ -242,23 +260,6 @@ def read_resource(uri: str) -> str | bytes:
     Handle requests for markdown and PDF resources.
     Returns text for markdown, bytes for PDF.
     """
-    parsed = urlparse(str(uri))
-
-    # Validate the scheme
-    if parsed.scheme not in ("markdown", "pdf"):
-        raise ValueError(f"Unsupported scheme: {parsed.scheme}")
-
-    # urlparse treats "markdown://researches/title" as:
-    #   scheme="markdown", netloc="researches", path="/title"
-    # So we need to check netloc for "researches" and get title from path
-    if parsed.netloc != "researches":
-        raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
-
-    paper_name = parsed.path.strip("/")
-    if not paper_name or "/" in paper_name:
-        raise ValueError(f"Invalid URI format. Expected {parsed.scheme}://researches/{{title}}")
-
-    resource_type: ResourceType = "markdown" if parsed.scheme == "markdown" else "pdf"
-
-    return _read_research_resource(paper_name, resource_type)
+    parsed = _parse_resource_uri(uri)
+    return _read_research_resource(parsed.slug, parsed.resource_type)
 
