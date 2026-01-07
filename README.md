@@ -31,7 +31,8 @@ fabric-mcp-server/
 │   ├── paths.py           # Directory/path utilities
 │   ├── text.py            # Text processing utilities
 │   ├── patterns.py        # Pattern operations
-│   └── strategies.py      # Strategy operations
+│   ├── strategies.py      # Strategy operations
+│   └── prompt_builder.py  # Prompt construction utilities
 │
 ├── mcp_handlers/          # MCP protocol handlers package
 │   ├── __init__.py        # Re-exports all handlers
@@ -178,6 +179,34 @@ To make this server visible to all Docker MCP clients (like the `docker mcp` CLI
     ```bash
     docker mcp gateway run fabric
     ```
+
+## Debugging with MCP Inspector
+
+The [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) is an interactive developer tool for testing and debugging MCP servers. It allows you to inspect resources, test prompts, execute tools, and monitor server notifications.
+
+### Running the Inspector
+
+To debug this Fabric MCP server with MCP Inspector, run:
+
+```bash
+npx @modelcontextprotocol/inspector docker run -i --rm fabric-mcp-server
+```
+
+This will launch the Inspector UI in your browser, connecting to the Fabric MCP server running in Docker.
+
+### Inspector Features
+
+- **Resources Tab**: Browse and inspect research documents (markdown and PDF)
+- **Prompts Tab**: Test Fabric patterns with custom inputs and strategies
+- **Tools Tab**: Execute `list_patterns`, `list_strategies`, `execute_pattern`, and research resource tools
+- **Notifications Pane**: Monitor server logs and notifications
+
+### Development Workflow
+
+1. Build the Docker image: `docker build -t fabric-mcp-server .`
+2. Launch the Inspector with the command above
+3. Make changes to your server code
+4. Rebuild the image and reconnect the Inspector to test
 
 ## How it Works
 
