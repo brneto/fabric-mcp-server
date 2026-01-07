@@ -32,17 +32,17 @@ def build_prompt(
     content = get_pattern_content(pattern_name)
     if content is None:
         raise ValueError(f"Pattern '{pattern_name}' not found")
+    
+    # Append user input if provided
+    if user_input:
+        content += f"{user_input}"
 
-    # Prepend strategy if provided
+    # Append strategy if provided
     if strategy_name:
         strategy = get_strategy_content(strategy_name)
         if not strategy:
             raise ValueError(f"Strategy '{strategy_name}' not found")
         content += f"\n\n{strategy.get('prompt')}"
-
-    # Append user input if provided
-    if user_input:
-        content = f"{content}\n{user_input}"
 
     return content
 
